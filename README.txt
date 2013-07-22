@@ -103,7 +103,7 @@ To-Do List
 Contributors
 ==============
 
-  * Simon Caine is the latest recruit
+  * Simon Caine is the latest recruit (yay)
 
   * Hamish Ramsay has promised to at least think about adding some extra 
   diagnostics.

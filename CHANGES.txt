@@ -1,0 +1,17 @@
+v0.1.0 01 July 2013 -- Initial Release!
+
+v0.1.1 03 July 2013 -- Very minor changes to docs and figure plotting.
+
+
+v0.1.2 08 July 2013 -- A number of changes:
+    - Added a parcel ascent routine based on provided pressure, dewpoint and 
+      temperature. This routine adds some characteristics to the plot in the 
+      upper LHS. TODO: initialise parcels automatically, calculate CAPE and 
+      CIN and Precipitable water... 
+    - Removed reliance on rcParams to make the figure look pretty. Did this 
+      because I got annoyed (and I'm sure that others will too) at what 
+      happens to graphs plotted subsequently... they end up with yellow axes 
+      etc. 
+    - Improved some of the aesthetics of the plot... moved standard 
+      atmosphere height axis to right hand side.
+

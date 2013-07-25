@@ -18,7 +18,7 @@ Typical usage often looks like this::
 
     from skewt import SkewT
     sounding = SkewT.Sounding(filename="soundingdata.txt")
-    sounding.plot_skewt()
+    sounding.plot_skewt(color='r',lw=2)
 
 Alternatively you may input the required data fields in a dictionary. The 
 dictionary must have as a minimum the fields PRES and TEMP corresponding to 
@@ -31,26 +31,24 @@ degrees WDIR. Other fields may be included as per the docstring::
 
     from skewt import SkewT
     sounding = SkewT.Sounding(data=data_dict)
-    sounding.plot_skewt
+    sounding.plot_skewt(color='r',lw=2)
 
 News
 ====
-I was so thrilled to see that there were something like 80 downloads in the 
-first week that I dropped everything else and pushed through some changes I 
-had been meaning to make. Thanks for your interest in this package and I'd 
-love to hear your feedback: thomas.chubb AT monash.edu
+Simon Caine is now on board as a developer! We look forward to a bunch of 
+exciting improvements from this Guru of Python/Atmos.
+
+Thanks for your interest in this package and I'd love to hear your feedback: 
+thomas.chubb AT monash.edu
 
 Here's a summary of what's new in this release:
 
-* Added a parcel ascent routine based on provided pressure, dewpoint and 
-  temperature. This routine adds some characteristics to the plot in the 
-  upper LHS. TODO: initialise parcels automatically, calculate CAPE and CIN 
-  and Precipitable water... 
-* Removed reliance on rcParams to make the figure look pretty. Did this 
-  because I got annoyed (and I'm sure that others will too) at what happens 
-  to graphs plotted subsequently... they end up with yellow axes etc.
-* Improved some of the aesthetics of the plot... moved standard atmosphere 
-  height axis to right hand side.
+* Added an automatic parcel initialisation routine to facilitate parcel 
+  ascent routine.
+* Bug-fix: There was an error thrown if the input data wasn't masked arrays. 
+  This must have been really annoying... Sorry, and thanks Simon for 
+  pointing this out. You wouldn't have noticed if you were reading text 
+  files because the Sounding.readfile() method returns masked arrays.
 
 Sounding Files
 ==============
@@ -72,8 +70,8 @@ The script defines columns by character number so you really do have to get
 the format *exactly* right. One day I will get around to writing a routine 
 to output the text files properly.
 
-Parcel Ascent (New in version 0.1.2!)
-=====================================
+Parcel Ascent
+=============
 Simple routine to calculate the characteristics of a parcel initialised with 
 pressure, temperature and dew point temperature. You could do it like this::
 
@@ -84,15 +82,42 @@ pressure, temperature and dew point temperature. You could do it like this::
     sounding.add_profile(color='r',lw=2)
     sounding.lift_parcel(1004.,17.4,8.6)
     draw()
- 
-The parcel properties are manually input at this point. For the example 
-above (BOM), I believe that the temperature was the forecast maximum for the 
-day and the dewpoint temp was derived by taking the average mixing ratio 
-from the lowest 50 (100??) mb and calculating the corresponding dew point 
-temperature for the surface pressure at the sounding time.
+
+Automatic Parcel Definition (New in version 0.1.3!)
+---------------------------------------------------
+You can still manually input a parcel as in the example above, but there is 
+a new routine to automagically define a parcel from the sounding itself. You 
+define a layer depth that you would like to characterise (say 100mb). The 
+routine surface_parcel then returns
+
+1. The surface pressure (just the pressure of the lowest level)
+2. The characteristic dew-point temperature (from the average Qv in the layer)
+3. The characteristic temperature (from the maximum Theta in the layer)
+
+You could do it like this::
+
+    from skewt import SkewT
+
+    sounding=SkewT.Sounding("examples/94975.2013070200.txt")
+    sounding.make_skewt_axes()
+    sounding.add_profile(color='r',lw=2)
+    parcel=sounding.surface_parcel(mixheight=100.)
+    sounding.lift_parcel(*parcel)
+    draw()
+
+The above steps are also now included in the Sounding.plot_skewt() wrapper 
+for your convenience, so all of the above can be condensed with::
+
+    from skewt import SkewT
+
+    sounding=SkewT.Sounding("examples/94975.2013070200.txt")
+    sounding.plot_skewt(color='r',lw=2)
+
 
 To-Do List
 ==========
+* The Sounding.readfile() routine is a bit of a mess.
+
 * I want to do some basic diagnostics given the lifted parcel. This 
   shouldn't be hard it's just that I have more pressing things to do. If 
   anybody out there wants to adapt/contribute routines that they have I'd be 
@@ -103,12 +128,12 @@ To-Do List
 Contributors
 ==============
 
-  * Simon Caine is the latest recruit (yay)
+* Simon Caine is the latest recruit (yay)
 
-  * Hamish Ramsay has promised to at least think about adding some extra 
+* Hamish Ramsay has promised to at least think about adding some extra 
   diagnostics.
 
-  * The initial SkewX classes were provided by a fellow called Ryan May who 
+* The initial SkewX classes were provided by a fellow called Ryan May who 
   was a student at OU. I have not made contact with Ryan other than to 
   download his scripts and modify them for my own purposes.
 

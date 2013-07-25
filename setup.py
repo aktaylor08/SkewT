@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='SkewT',
-    version='0.1.2',
+    version='0.1.3',
     author='Thomas Chubb',
     author_email='thomas.chubb@monash.edu',
     packages=['skewt'],

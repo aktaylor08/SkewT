@@ -11,7 +11,7 @@ from matplotlib.pyplot import rcParams,figure,show,draw
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
 from thermodynamics import VirtualTemp,Latentc,SatVap,MixRatio,GammaW,\
-	VirtualTempFromMixR
+	VirtualTempFromMixR,MixR2VaporPress,DewPoint,Theta,TempK
 from thermodynamics import Rs_da, Cp_da, Epsilon
 
 
@@ -288,39 +288,24 @@ class Sounding(UserDict):
 	UserDict.__init__(self)
 
 	if data is None:
-	    self['data']={}
+	    self.data={}
 	    self.readfile(filename)
 	else:
-	    self['data']=data
+	    self.data=data
 	    self['SoundingDate']=""
 
-    def plot_skewt(self, imagename=None, title=None):
-	'''
-	If you want to plot a skewt, Sounding.plot_skewt
-
-	Inputs:
-	    p -> 1d numpy array, pressure in Pa/100.0 (hPa)
-	    h -> 1d numpy array, height in m
-	    t -> 1d numpy array, temp in C
-	    td -> 1d numpy array, dew pt temp in C
-	    imagename -> string, the name you want to call the image ... i.e. louise.png
-
-	Optional Inputs:
-	    title -> string, obvious really
-	    show -> True/False, if True will open and show plot, if false, will just save to image file.
-
-	Example usage:
-	    Sounding.plot_skewt(p/100.0 (Grrr), h, t (C), td (C), 'louse.png', title = 'woo.png', show = False)
+    def plot_skewt(self, imagename=None, title=None, **kwargs):
+	"""A wrapper for plotting the skewt diagram for a Sounding instance."""
 	
-	'''
-
 	self.make_skewt_axes()
-	self.add_profile(color='r',lw=2,)
+	self.add_profile(**kwargs)
+	parcel=self.surface_parcel()
+	self.lift_parcel(*parcel)
 
 	if isinstance(title, str):
 	    self.skewxaxis.set_title(title)
 	else:
-	    self.skewxaxis.set_title(self['SoundingDate'])
+	    self.skewxaxis.set_title("%s: %s"%(self["StationNumber"],self['SoundingDate']))
 
 	if imagename is not None:
 	    print("saving figure")
@@ -329,36 +314,50 @@ class Sounding(UserDict):
     def add_profile(self,bloc=0.5,**kwargs):
 	"""Add a new profile to the SkewT plot.
 
-	Use the kwarg bloc to set the alignment of the wind barbs 
-	from the centerline (useful if plotting multplie profiles 
-	on the one axis)
+	This is abstracted from plot_skewt to enable the plotting of
+	multiple profiles on a single axis, by updating the data attribute.
+	For example:
+
+	S=SkewT.Sounding(data={})
+	S.make_skewt_axes()
+	S.readfile("../examples/94975.2013062800.txt")
+	S.add_profile(color="b",bloc=0.5)
+	S.readfile("../examples/94975.2013070900.txt")
+	S.add_profile(color="r",bloc=1.)
+
+	Use the kwarg 'bloc' to set the alignment of the wind barbs from the centerline (useful if plotting multiple profiles on the one axis)
+
+
+	Modified 25/07/2013: enforce masking of input data for this 
+	function (does not affect the data attribute).
 	"""
 
-	assert self['data'].has_key('pres'), "Pressure in hPa (PRES) is required!"
-	p = self['data']['pres']
+	try: pres = ma.masked_invalid(self.data['pres'])
+	except KeyError: raise KeyError, "Temperature in hPa (PRES) is required!"
 
-	assert self['data'].has_key('temp'), "Temperature in C (TEMP) is required!"
+	try: tc=ma.masked_invalid(self.data['temp'])
+	except KeyError: raise KeyError, "Temperature in C (TEMP) is required!"
 
-
-	try:
-	    assert self['data'].has_key('drct')
-	    assert self['data'].has_key('sknt')
-	    rdir = (270.-self['data']['drct'])*(pi/180.)
-	    uu = self['data']['sknt']*cos(rdir)
-	    vv = self['data']['sknt']*sin(rdir)
-	except AssertionError:
-	    print "Warning: No SKNT/DRCT available"
-	    uu=ma.zeros(p.shape)
-	    vv=ma.zeros(p.shape)
-
-	tcprof=self.skewxaxis.plot(self['data']['temp'], self['data']['pres'],\
-		zorder=5,**kwargs)
-	try:
-	    dpprof=self.skewxaxis.plot(self['data']['dwpt'], self['data']['pres'],\
-		    zorder=5,**kwargs)
+	try: dwpt=ma.masked_invalid(self.data['dwpt'])
 	except KeyError:
 	    print "Warning: No DWPT available"
+	    dwpt=ma.masked_array(zeros(pres.shape),mask=False)
 
+	try:
+	    sknt=self.data['sknt']
+	    drct=self.data['drct']
+	    rdir = (270.-drct)*(pi/180.)
+	    uu = ma.masked_invalid(sknt*cos(rdir))
+	    vv = ma.masked_invalid(sknt*sin(rdir))
+	except KeyError:
+	    print "Warning: No SKNT/DRCT available"
+	    uu=ma.masked_array(zeros(pres.shape),mask=True)
+	    vv=ma.masked_array(zeros(pres.shape),mask=True)
+
+	tcprof=self.skewxaxis.plot(tc, pres, zorder=5,**kwargs)
+	dpprof=self.skewxaxis.plot(dwpt, pres, zorder=5,**kwargs)
+
+	# this line should no longer cause an exception
 	nbarbs=(~uu.mask).sum()
 
 	skip=max(1,int(nbarbs/32))
@@ -369,7 +368,7 @@ class Sounding(UserDict):
 	if kwargs.has_key('alpha'): balph=kwargs['alpha']
 	else: balph=1.
 
-	self.wbax.barbs((zeros(p.shape)+bloc)[::skip]-0.5, p[::skip],\
+	self.wbax.barbs((zeros(pres.shape)+bloc)[::skip]-0.5, pres[::skip],\
 		uu[::skip], vv[::skip],\
 		length=6,color=bcol,alpha=balph,lw=0.5)
 
@@ -484,7 +483,7 @@ class Sounding(UserDict):
 
 	for field in fields:
 	    ff=field.lower()
-	    self['data'][ff]=ma.masked_values(output[ff],-999.)
+	    self.data[ff]=ma.masked_values(output[ff],-999.)
 
 	return None
 
@@ -541,6 +540,43 @@ class Sounding(UserDict):
 
 	self.fig.text(0.1,0.895,dtext,fontname="monospace",va='top')
 
+	return
+
+    def surface_parcel(self,mixdepth=125):
+	"""Returns parameters for a parcel initialised by:
+	1. Surface pressure (i.e. pressure of lowest level)
+	2. Surface temperature determined from max(theta) of lowest <mixdepth> mbar
+	3. Dew point temperature representative of lowest <mixdepth> mbar
+
+	Inputs:
+	mixdepth (mbar): depth to average mixing ratio over
+	"""
+
+	pres=self.data["pres"]
+	temp=self.data["temp"]
+	dwpt=self.data["dwpt"]
+
+	# identify the layers for averaging
+	layers=pres>pres[0]-mixdepth
+	
+	# parcel pressure is surface pressure
+	pres_s=pres[0]
+
+	# average theta over mixheight to give
+	# parcel temperature
+	thta_mix=Theta(temp[layers]+273.15,pres[layers]*100.).max()
+	temp_s=TempK(thta_mix,pres_s*100)-273.15
+
+	# average mixing ratio over mixheight
+	vpres=SatVap(dwpt)
+	mixr=MixRatio(vpres,pres*100)
+	mixr_mix=mixr[layers].mean()
+	vpres_s=MixR2VaporPress(mixr_mix,pres_s*100)
+
+	# surface dew point temp
+	dwpt_s=DewPoint(vpres_s)
+
+	return pres_s,temp_s,dwpt_s
 
 def lift_wet(startt,pres):
     #--------------------------------------------------------------------

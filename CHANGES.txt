@@ -32,3 +32,14 @@ v0.1.3 25 July 2013 -- Minor changes (New release for pypi):
       work. TempK now calculates temperature given theta an pressure (I 
       can't believe I didn't already have this)
 
+v0.1.3r1 26 July -- Minor plotting changes and shell command-line features 
+(No new release for pypi)
+    - zorder of parcel plot set to plot beneath tc/td trace but above text 
+      labels
+    - shell command invocation: 
+	- python SkewT.py does the two examples from the "examples" 
+	  directory
+	- python SkewT.py example does the same thing
+	- python SkewT.py path/to/soundingfile.txt makes a skewt plot of the 
+	  sounding in soundingfile
+

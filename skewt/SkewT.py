@@ -518,17 +518,20 @@ class Sounding(UserDict):
 
 	col=[.6,.6,.6]
 
+	# zorder
+	zo=4
+
 	# Plot traces below LCL
-	self.skewxaxis.plot(T_dry[Pres>=P_lcl],Pres[Pres>=P_lcl],color=col,lw=2,)
-	self.skewxaxis.plot(T_iso[Pres>=P_lcl],Pres[Pres>=P_lcl],color=col,lw=2,)
-	self.skewxaxis.plot(T_lcl,P_lcl,ls='',marker='o',mec=col,mfc=col)
+	self.skewxaxis.plot(T_dry[Pres>=P_lcl],Pres[Pres>=P_lcl],color=col,lw=2,zorder=zo)
+	self.skewxaxis.plot(T_iso[Pres>=P_lcl],Pres[Pres>=P_lcl],color=col,lw=2,zorder=zo)
+	self.skewxaxis.plot(T_lcl,P_lcl,ls='',marker='o',mec=col,mfc=col,zorder=zo)
 
 	# Now lift a wet parcel from the intersection point
 	preswet=linspace(P_lcl,200)
 	tempwet=lift_wet(T_lcl,preswet)
 
 	# Plot trace above LCL
-	self.skewxaxis.plot(tempwet,preswet,color=col,lw=2,)
+	self.skewxaxis.plot(tempwet,preswet,color=col,lw=2,zorder=zo)
 
 	# Add text to sounding
 	dtext ="Parcel:\n"
@@ -596,12 +599,21 @@ def lift_wet(startt,pres):
 
 if __name__=='__main__':
 
-    sounding=Sounding("../examples/94975.2013070900.txt")
-    sounding.make_skewt_axes()
-    sounding.add_profile(color='r',lw=2)
-    sounding.lift_parcel(1033.,10.7,-0.9)
+    if len(sys.argv)==1 or sys.argv[1]=="example":
+	# Do the examples in the "examples" directory
+	examples=("2013070200","2013070900",)
+	parcels=((1004.,17.4,8.6),(1033.,10.7,-0.9),)
+	for ex,pc in zip(examples,parcels):
+	    sounding=Sounding("../examples/94975.%s.txt"%ex)
+	    sounding.make_skewt_axes()
+	    sounding.add_profile(color='r',lw=2)
+	    sounding.lift_parcel(*pc)
+	    sounding.fig.savefig("../examples/94975.%s.png"%ex)
+	show()
+    else:
+	sounding=Sounding(sys.argv[1])
+	sounding.plot_skewt(color='r')
+	show()
 
-    sounding.fig.savefig("../examples/94975.2013070900.png")
-    show()
     
 
